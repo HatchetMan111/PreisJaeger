@@ -48,7 +48,8 @@ Das Skript (`set -euo pipefail`, idempotent):
    `debian-12-standard`-Template falls nötig,
 3. erstellt den LXC `preisjaeger` (`onboot: 1`, unprivilegiert, `nesting=1`),
 4. installiert im Container Node.js 22, Build-Tools, klont dieses Repo nach
-   `/opt/preisjaeger/app` (User `preisjaeger`), `npm ci --omit=dev`,
+   `/opt/preisjaeger/repo` (User `preisjaeger`; `app/` ist ein Symlink auf
+   `repo/app`, da Repo-Root != App-Root), `npm ci --omit=dev`,
 5. installiert **danach** den Chromium passend zur tatsächlich installierten
    Playwright-Version (sonst liefert die Suche still keine Ergebnisse),
 6. schreibt `/opt/preisjaeger/.env` (nur leere Werte), installiert die

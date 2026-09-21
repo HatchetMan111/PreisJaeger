@@ -195,19 +195,22 @@ chown -R "$APP:$APP" "/opt/$APP"
 
 echo "==> [CT] App-Code (Klon oder Update, nur bei neuer Rev neu bauen)"
 cd "/opt/$APP"
+git config --global --add safe.directory "/opt/$APP/repo" 2>/dev/null || true
 NEED_BUILD=0
-if [[ -d app/.git ]]; then
-  OLD_REV="$(git -C app rev-parse HEAD)"
-  git -C app fetch origin
-  git -C app reset --hard "origin/main"
-  NEW_REV="$(git -C app rev-parse HEAD)"
+if [[ -d repo/.git ]]; then
+  OLD_REV="$(git -C repo rev-parse HEAD)"
+  git -C repo fetch origin
+  git -C repo reset --hard "origin/main"
+  NEW_REV="$(git -C repo rev-parse HEAD)"
   [[ "$OLD_REV" != "$NEW_REV" ]] && NEED_BUILD=1
 else
-  rm -rf app
-  git clone --branch main --depth 1 "https://github.com/HatchetMan111/PreisJaeger.git" app-tmp
-  mv app-tmp app
+  rm -rf repo app repo-tmp
+  git clone --branch main --depth 1 "https://github.com/HatchetMan111/PreisJaeger.git" repo-tmp
+  mv repo-tmp repo
   NEED_BUILD=1
 fi
+# Repo-Root != App-Root: die Node-App liegt in repo/app -> als app/ verlinken
+ln -sfn "/opt/$APP/repo/app" app
 chown -R "$APP:$APP" "/opt/$APP"
 
 echo "==> [CT] npm-Abhaengigkeiten (Diagnose: App-Inhalt)"
@@ -254,7 +257,7 @@ chown "$APP:$APP" "/opt/$APP/.env"
 chmod 600 "/opt/$APP/.env"
 
 echo "==> [CT] systemd-Unit"
-cp "app/systemd/preisjaeger.service" /etc/systemd/system/preisjaeger.service
+cp "repo/systemd/preisjaeger.service" /etc/systemd/system/preisjaeger.service
 systemctl daemon-reload
 systemctl enable preisjaeger
 systemctl restart preisjaeger || systemctl start preisjaeger
