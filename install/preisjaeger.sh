@@ -177,6 +177,7 @@ source "$ENV_FILE"
 
 echo "==> [CT] Systempakete"
 export DEBIAN_FRONTEND=noninteractive
+export LANG=C LC_ALL=C   # stumme perl/locale-Warnungen im Debian-Template
 apt-get update
 apt-get install -y curl ca-certificates gnupg git python3 build-essential iproute2 openssl
 
@@ -209,9 +210,15 @@ else
 fi
 chown -R "$APP:$APP" "/opt/$APP"
 
-echo "==> [CT] npm-Abhaengigkeiten"
+echo "==> [CT] npm-Abhaengigkeiten (Diagnose: App-Inhalt)"
+ls -la app | head -25
 if [[ "$NEED_BUILD" == "1" || ! -d app/node_modules ]]; then
-  (cd app && npm ci --omit=dev --no-audit --no-fund)
+  if [[ -f app/package-lock.json ]]; then
+    (cd app && npm ci --omit=dev --no-audit --no-fund)
+  else
+    echo "[CT] WARNUNG: kein package-lock.json im Klon -> Fallback 'npm install'"
+    (cd app && npm install --omit=dev --no-audit --no-fund)
+  fi
   chown -R "$APP:$APP" "/opt/$APP"
 fi
 
