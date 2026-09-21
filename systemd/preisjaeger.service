@@ -8,6 +8,7 @@ Type=simple
 User=preisjaeger
 WorkingDirectory=/opt/preisjaeger/app
 EnvironmentFile=/opt/preisjaeger/.env
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/preisjaeger/ms-playwright
 ExecStart=/usr/bin/node /opt/preisjaeger/app/server.js
 Restart=always
 RestartSec=5

@@ -13,6 +13,7 @@
   <nav>
     <button id="tab-search" class="active">Suche</button>
     <button id="tab-history">Verlauf</button>
+    <button id="tab-settings">Einstellungen</button>
   </nav>
 </header>
 
@@ -40,6 +41,44 @@
     <tbody id="history-body"></tbody>
   </table>
   <div id="detail" class="hidden"></div>
+</section>
+
+<section id="view-settings" class="hidden">
+  <div class="card">
+    <h3>LLM (optional)</h3>
+    <label>Provider
+      <select id="s-provider">
+        <option value="none">Kein LLM – lokal &amp; kostenlos (Standard)</option>
+        <option value="openrouter">OpenRouter (Key nötig)</option>
+      </select>
+    </label>
+    <label>OpenRouter API-Key
+      <input id="s-or-key" type="password" placeholder="sk-or-…" autocomplete="off">
+    </label>
+    <div class="mut" id="s-or-hint"></div>
+    <label>Modell <input id="s-or-model" type="text" placeholder="openai/gpt-4o-mini"></label>
+    <div class="row">
+      <button id="s-save-llm">Speichern</button>
+      <button id="s-test-llm">Key testen</button>
+    </div>
+    <div id="s-llm-status" class="mut"></div>
+  </div>
+  <div class="card">
+    <h3>Shops</h3>
+    <div id="s-shops" class="mut">Lade …</div>
+    <label>Timeout pro Suche (ms) <input id="s-timeout" type="number" min="10000" max="120000" step="5000"></label>
+    <button id="s-save-shops">Speichern</button>
+    <div class="mut">Nichts angehakt = EU-Standardauswahl.</div>
+  </div>
+  <div class="card">
+    <h3>Fallback (optional)</h3>
+    <label><input id="s-fb" type="checkbox"> Brave-Fallback bei 0 Shop-Treffern</label>
+    <label>Brave API-Key
+      <input id="s-brave-key" type="password" placeholder="BSA…" autocomplete="off">
+    </label>
+    <div class="mut" id="s-brave-hint"></div>
+    <button id="s-save-fb">Speichern</button>
+  </div>
 </section>
 </main>
 

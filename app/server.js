@@ -3,6 +3,7 @@
 const express = require("express");
 const path = require("path");
 const db = require("./lib/db");
+const config = require("./lib/config");
 const shops = require("./lib/shops");
 const llm = require("./lib/llm");
 const fallback = require("./lib/fallback");
@@ -10,10 +11,12 @@ const fallback = require("./lib/fallback");
 const PORT = parseInt(process.env.PORT || "8090", 10);
 const HOST = process.env.HOST || "0.0.0.0";
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, "data", "searches.db");
-const SHOP_TIMEOUT_MS = parseInt(process.env.SHOP_TIMEOUT_MS || "40000", 10);
-const ENABLE_FALLBACK = String(process.env.ENABLE_FALLBACK || "false").toLowerCase() === "true";
+
+const shopTimeoutMs = () => parseInt(config.get("SHOP_TIMEOUT_MS") || "40000", 10);
+const fallbackEnabled = () => String(config.get("ENABLE_FALLBACK") || "false").toLowerCase() === "true";
 
 db.open(DB_PATH);
+config.init(db.handle());
 
 const app = express();
 app.use(express.json({ limit: "256kb" }));
@@ -40,12 +43,12 @@ app.post("/api/search", async (req, res) => {
   try {
     const normalized = await llm.normalize(query);
     const shopIds = shops.resolveShopIds(
-      String(process.env.SHOP_IDS || "").split(",").map((s) => s.trim()).filter(Boolean)
+      String(config.get("SHOP_IDS") || "").split(",").map((s) => s.trim()).filter(Boolean)
     );
 
-    let { products, errors, timedOut } = await shops.searchAll(normalized, shopIds, SHOP_TIMEOUT_MS);
+    let { products, errors, timedOut } = await shops.searchAll(normalized, shopIds, shopTimeoutMs());
     let source = "shops";
-    if (products.length === 0 && ENABLE_FALLBACK) {
+    if (products.length === 0 && fallbackEnabled()) {
       const fb = await fallback.braveSearch(normalized);
       if (fb.products.length > 0) {
         products = fb.products;
@@ -118,15 +121,6 @@ app.get("/api/history", (req, res) => {
   res.json({ history: db.getHistory(req.query.limit, req.query.q) });
 });
 
-app.get("/api/history/:id", (req, res) => {
-  const row = db.getById(req.params.id);
-  if (!row) return res.status(404).json({ error: "nicht gefunden" });
-  let results = [];
-  try { results = JSON.parse(row.all_results_json); } catch (err) { /* altes Format */ }
-  const best = row.product_key ? db.getBestPrice(row.product_key) : null;
-  res.json({ ...row, results, best });
-});
-
 app.get("/api/history/export", (req, res) => {
   const format = String(req.query.format || "json").toLowerCase();
   const rows = db.getHistory(500);
@@ -139,6 +133,37 @@ app.get("/api/history/export", (req, res) => {
     return;
   }
   res.json({ history: rows });
+});
+
+app.get("/api/history/:id", (req, res) => {
+  const row = db.getById(req.params.id);
+  if (!row) return res.status(404).json({ error: "nicht gefunden" });
+  let results = [];
+  try { results = JSON.parse(row.all_results_json); } catch (err) { /* altes Format */ }
+  const best = row.product_key ? db.getBestPrice(row.product_key) : null;
+  res.json({ ...row, results, best });
+});
+
+app.get("/api/settings", (req, res) => {
+  res.json({ settings: config.allMasked(), shop_defaults: shops.EU_DEFAULT_SHOPS });
+});
+
+app.post("/api/settings", (req, res) => {
+  try {
+    const { key, value } = req.body || {};
+    config.set(key, value);
+    res.json({ ok: true, settings: config.allMasked() });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post("/api/settings/test-openrouter", async (req, res) => {
+  try {
+    res.json(await llm.testKey((req.body && req.body.apiKey) || ""));
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message.split("\n")[0] });
+  }
 });
 
 app.listen(PORT, HOST, () => {

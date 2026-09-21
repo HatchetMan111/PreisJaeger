@@ -6,15 +6,17 @@
  * Faellt das LLM aus, laeuft die Suche mit Roh-Query + regelbasierter Begruendung weiter.
  */
 
+const config = require("./config");
+
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 function cfg() {
   return {
-    provider: (process.env.LLM_PROVIDER || "none").toLowerCase(),
-    apiKey: process.env.OPENROUTER_API_KEY || "",
-    model: process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
-    maxTokens: parseInt(process.env.OPENROUTER_MAX_TOKENS || "400", 10),
-    timeoutMs: parseInt(process.env.OPENROUTER_TIMEOUT_MS || "20000", 10),
+    provider: (config.get("LLM_PROVIDER") || "none").toLowerCase(),
+    apiKey: config.get("OPENROUTER_API_KEY") || "",
+    model: config.get("OPENROUTER_MODEL") || "openai/gpt-4o-mini",
+    maxTokens: parseInt(config.get("OPENROUTER_MAX_TOKENS") || "400", 10),
+    timeoutMs: parseInt(config.get("OPENROUTER_TIMEOUT_MS") || "20000", 10),
   };
 }
 
@@ -108,4 +110,25 @@ async function summarize({ query, winner, count, isNewBest, best }) {
   }
 }
 
-module.exports = { normalize, summarize, modelName };
+/** Prueft einen OpenRouter-Key (fuer den Key-Test in den Einstellungen). */
+async function testKey(apiKey) {
+  const key = (apiKey || cfg().apiKey || "").trim();
+  if (!key) throw new Error("Kein API-Key vorhanden");
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/models", {
+      signal: ctrl.signal,
+      headers: { Authorization: "Bearer " + key },
+    });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error("OpenRouter HTTP " + res.status + " (Key ungueltig?)");
+    const data = await res.json();
+    return { ok: true, models: Array.isArray(data.data) ? data.data.length : 0 };
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
+module.exports = { normalize, summarize, modelName, testKey };

@@ -229,7 +229,13 @@ fi
 echo "==> [CT] Playwright-Chromium passend zur installierten Playwright-Version"
 # WICHTIG: Browser muessen zur TATSAECHLICH installierten Playwright-Version passen,
 # sonst liefert die Suche still 'No results' (gelernt aus Live-Test).
+# UND: sie muessen fuer den Service-User lesbar sein. Darum eigener Pfad
+# (PLAYWRIGHT_BROWSERS_PATH, siehe systemd-Unit), nicht /root/.cache.
+export PLAYWRIGHT_BROWSERS_PATH="/opt/$APP/ms-playwright"
+mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
 (cd app && npx --no-install playwright install --with-deps chromium)
+chown -R "$APP:$APP" "/opt/$APP"
+unset PLAYWRIGHT_BROWSERS_PATH
 
 echo "==> [CT] .env (nur leere Werte fuellen, gesetzte nie ueberschreiben)"
 fill_empty() { # key value envfile

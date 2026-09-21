@@ -6,10 +6,12 @@
  * Firecrawl ist als naechste Stufe vorgesehen (siehe README, Roadmap).
  */
 
+const config = require("./config");
+
 async function braveSearch(query) {
-  const apiKey = process.env.BRAVE_API_KEY || "";
+  const apiKey = (config.get("BRAVE_API_KEY") || "").trim();
   if (!apiKey) return { products: [], error: "BRAVE_API_KEY nicht gesetzt" };
-  const timeoutMs = parseInt(process.env.BRAVE_TIMEOUT_MS || "15000", 10);
+  const timeoutMs = parseInt(config.get("BRAVE_TIMEOUT_MS") || "15000", 10);
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {

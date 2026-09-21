@@ -6,14 +6,16 @@ const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({
 }[c]));
 
 function switchTab(which) {
-  $("tab-search").classList.toggle("active", which === "search");
-  $("tab-history").classList.toggle("active", which === "history");
-  $("view-search").classList.toggle("hidden", which !== "search");
-  $("view-history").classList.toggle("hidden", which !== "history");
+  for (const t of ["search", "history", "settings"]) {
+    $("tab-" + t).classList.toggle("active", which === t);
+    $("view-" + t).classList.toggle("hidden", which !== t);
+  }
   if (which === "history") loadHistory();
+  if (which === "settings") loadSettings();
 }
 $("tab-search").onclick = () => switchTab("search");
 $("tab-history").onclick = () => switchTab("history");
+$("tab-settings").onclick = () => switchTab("settings");
 
 $("search-form").onsubmit = async (e) => {
   e.preventDefault();
@@ -77,6 +79,73 @@ async function loadHistory() {
   });
 }
 $("hsearch").onclick = loadHistory;
+
+async function saveSetting(key, value) {
+  const res = await fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key, value }),
+  });
+  const d = await res.json();
+  if (!res.ok) throw new Error(d.error || "Speichern fehlgeschlagen");
+  return d.settings;
+}
+
+async function loadSettings() {
+  const [sres, shopsRes] = await Promise.all([fetch("/api/settings"), fetch("/api/shops")]);
+  const { settings: s, shop_defaults } = await sres.json();
+  const { shops } = await shopsRes.json();
+  $("s-provider").value = s.LLM_PROVIDER || "none";
+  $("s-or-model").value = s.OPENROUTER_MODEL || "";
+  $("s-or-hint").textContent = s.OPENROUTER_API_KEY
+    ? "Gespeichert: " + s.OPENROUTER_API_KEY + " (Feld leer lassen = behalten)" : "Kein Key gespeichert.";
+  $("s-timeout").value = s.SHOP_TIMEOUT_MS || "40000";
+  $("s-fb").checked = s.ENABLE_FALLBACK === "true";
+  $("s-brave-hint").textContent = s.BRAVE_API_KEY
+    ? "Gespeichert: " + s.BRAVE_API_KEY + " (Feld leer lassen = behalten)" : "Kein Key gespeichert.";
+  const active = (s.SHOP_IDS || "").split(",").map((x) => x.trim()).filter(Boolean);
+  const check = (id) => active.length === 0 ? shop_defaults.includes(id) : active.includes(id);
+  $("s-shops").innerHTML = shops.map((sh) => `<label><input type="checkbox" data-shop="${esc(sh.id)}"${check(sh.id) ? " checked" : ""}>${esc(sh.name)}</label>`).join("");
+}
+
+$("s-save-llm").onclick = async () => {
+  try {
+    await saveSetting("LLM_PROVIDER", $("s-provider").value);
+    if ($("s-or-key").value) await saveSetting("OPENROUTER_API_KEY", $("s-or-key").value);
+    await saveSetting("OPENROUTER_MODEL", $("s-or-model").value.trim() || "openai/gpt-4o-mini");
+    $("s-or-key").value = "";
+    $("s-llm-status").textContent = "Gespeichert.";
+    loadSettings();
+  } catch (err) { $("s-llm-status").textContent = "Fehler: " + err.message; }
+};
+
+$("s-test-llm").onclick = async () => {
+  $("s-llm-status").textContent = "Teste …";
+  try {
+    const res = await fetch("/api/settings/test-openrouter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apiKey: $("s-or-key").value }),
+    });
+    const d = await res.json();
+    $("s-llm-status").textContent = res.ok
+      ? `Key ok (${d.models} Modelle verfügbar).` : "Fehler: " + (d.error || "unbekannt");
+  } catch (err) { $("s-llm-status").textContent = "Fehler: " + err.message; }
+};
+
+$("s-save-shops").onclick = async () => {
+  const ids = [...document.querySelectorAll("#s-shops input[data-shop]:checked")].map((c) => c.dataset.shop);
+  await saveSetting("SHOP_IDS", ids.join(","));
+  await saveSetting("SHOP_TIMEOUT_MS", $("s-timeout").value);
+  loadSettings();
+};
+
+$("s-save-fb").onclick = async () => {
+  await saveSetting("ENABLE_FALLBACK", $("s-fb").checked ? "true" : "false");
+  if ($("s-brave-key").value) await saveSetting("BRAVE_API_KEY", $("s-brave-key").value);
+  $("s-brave-key").value = "";
+  loadSettings();
+};
 
 async function showDetail(id) {
   const res = await fetch("/api/history/" + id);

@@ -80,4 +80,4 @@ function getById(id) {
   return db.prepare("SELECT * FROM searches WHERE id = ?").get(id) || null;
 }
 
-module.exports = { open, insertSearch, getBestPrice, getHistory, getById };
+module.exports = { open, handle: () => db, insertSearch, getBestPrice, getHistory, getById };
