@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PreisJäger – lokale Preisrecherche</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>PreisJäger</h1>
+  <p class="sub">Lokale Preisrecherche · Preissieger · Verlauf · Bestpreis</p>
+  <nav>
+    <button id="tab-search" class="active">Suche</button>
+    <button id="tab-history">Verlauf</button>
+  </nav>
+</header>
+
+<main>
+<section id="view-search">
+  <form id="search-form">
+    <input id="q" type="text" placeholder="z. B. Ubiquiti UXG-Lite" autocomplete="off" required>
+    <button type="submit">Suchen</button>
+  </form>
+  <div id="status"></div>
+  <div id="summary" class="hidden"></div>
+  <div id="winner" class="hidden"></div>
+  <div id="results"></div>
+</section>
+
+<section id="view-history" class="hidden">
+  <div class="row">
+    <input id="hq" type="text" placeholder="Verlauf filtern …">
+    <button id="hsearch">Filtern</button>
+    <a href="/api/history/export?format=csv" class="btn">CSV</a>
+    <a href="/api/history/export?format=json" class="btn">JSON</a>
+  </div>
+  <table>
+    <thead><tr><th>Datum</th><th>Anfrage</th><th>Gewinner</th><th>Preis</th><th>Quelle</th><th>Dauer</th></tr></thead>
+    <tbody id="history-body"></tbody>
+  </table>
+  <div id="detail" class="hidden"></div>
+</section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

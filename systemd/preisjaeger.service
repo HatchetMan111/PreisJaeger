@@ -1,0 +1,16 @@
+[Unit]
+Description=PreisJaeger - lokale Preisrecherche (Web UI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=preisjaeger
+WorkingDirectory=/opt/preisjaeger/app
+EnvironmentFile=/opt/preisjaeger/.env
+ExecStart=/usr/bin/node /opt/preisjaeger/app/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
