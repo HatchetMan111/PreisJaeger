@@ -159,6 +159,7 @@ ENV_LOCAL="$(mktemp)"
 chmod 600 "$ENV_LOCAL"
 cat > "$ENV_LOCAL" <<EOF
 PORT=$PORT
+DEBUG=$DEBUG
 OPENROUTER_API_KEY=$OPENROUTER_API_KEY
 OPENROUTER_MODEL=$OPENROUTER_MODEL
 LLM_PROVIDER=$LLM_PROVIDER
@@ -252,7 +253,7 @@ fill_empty OPENROUTER_API_KEY "$OPENROUTER_API_KEY" "/opt/$APP/.env"
 fill_empty OPENROUTER_MODEL "$OPENROUTER_MODEL" "/opt/$APP/.env"
 fill_empty LLM_PROVIDER "$LLM_PROVIDER" "/opt/$APP/.env"
 fill_empty BRAVE_API_KEY "$BRAVE_API_KEY" "/opt/$APP/.env"
-[[ "$DEBUG" == "1" ]] && set -x
+[[ "${DEBUG:-0}" == "1" ]] && set -x
 chown "$APP:$APP" "/opt/$APP/.env"
 chmod 600 "/opt/$APP/.env"
 
