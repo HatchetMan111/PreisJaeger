@@ -14,6 +14,8 @@ label { display: block; margin: .6rem 0; }
 label input[type=checkbox] { margin-right: .5rem; }
 h3 { margin-top: 0; }
 button, .btn { background: var(--acc); color: #06121f; border: none; padding: .7rem 1.2rem; border-radius: .5rem; cursor: pointer; font-size: 1rem; text-decoration: none; display: inline-block; }
+button.danger { background: #e05252; color: #fff; }
+#pmin, #pmax { min-width: 0; width: 6.5rem; flex: none; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: .7rem; padding: 1rem; margin-bottom: .8rem; }
 .card.winner { border-color: var(--win); }
 .badge { display: inline-block; padding: .2rem .6rem; border-radius: 999px; font-size: .8rem; margin-right: .4rem; }

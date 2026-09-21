@@ -38,6 +38,10 @@ function open(dbPath) {
   db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
   db.exec(SCHEMA);
+  // Migration fuer bestehende DBs (CREATE TABLE IF NOT EXISTS greift dort nicht)
+  const cols = db.prepare("PRAGMA table_info(searches)").all().map((c) => c.name);
+  if (!cols.includes("price_min_cents")) db.exec("ALTER TABLE searches ADD COLUMN price_min_cents INTEGER");
+  if (!cols.includes("price_max_cents")) db.exec("ALTER TABLE searches ADD COLUMN price_max_cents INTEGER");
   return db;
 }
 
@@ -45,22 +49,27 @@ function insertSearch(row) {
   const stmt = db.prepare(`INSERT INTO searches
     (query, normalized_query, product_key, product_key_confidence, winner_name,
      winner_price_cents, winner_price_display, winner_currency, winner_url, winner_shop,
-     winner_is_us_import, all_results_json, result_count, source, model, duration_ms, error)
+     winner_is_us_import, price_min_cents, price_max_cents,
+     all_results_json, result_count, source, model, duration_ms, error)
     VALUES (@query, @normalized_query, @product_key, @product_key_confidence, @winner_name,
      @winner_price_cents, @winner_price_display, @winner_currency, @winner_url, @winner_shop,
-     @winner_is_us_import, @all_results_json, @result_count, @source, @model, @duration_ms, @error)`);
+     @winner_is_us_import, @price_min_cents, @price_max_cents,
+     @all_results_json, @result_count, @source, @model, @duration_ms, @error)`);
   return stmt.run(row).lastInsertRowid;
 }
 
-/** Historischer Bestpreis (Tiefstpreis) fuer einen product_key ueber alle bisherigen Suchen. */
-function getBestPrice(productKey) {
+/** Tiefst- und Höchstpreis je Produkt über alle bisherigen Suchen (fürs Preisgefühl). */
+function getPriceStats(productKey) {
   if (!productKey) return null;
-  const row = db.prepare(`SELECT winner_price_cents AS cents, winner_price_display AS display,
+  const sel = `SELECT winner_price_cents AS cents, winner_price_display AS display,
       winner_url AS url, winner_shop AS shop, winner_name AS name, created_at AS at
-    FROM searches
-    WHERE product_key = ? AND winner_price_cents IS NOT NULL
-    ORDER BY winner_price_cents ASC, created_at ASC LIMIT 1`).get(productKey);
-  return row || null;
+    FROM searches WHERE product_key = ? AND winner_price_cents IS NOT NULL`;
+  const low = db.prepare(sel + " ORDER BY winner_price_cents ASC, created_at ASC LIMIT 1").get(productKey);
+  if (!low) return null;
+  const high = db.prepare(sel + " ORDER BY winner_price_cents DESC, created_at DESC LIMIT 1").get(productKey);
+  const { n } = db.prepare(`SELECT COUNT(*) AS n FROM searches
+    WHERE product_key = ? AND winner_price_cents IS NOT NULL`).get(productKey);
+  return { low, high: high || low, count: n };
 }
 
 function getHistory(limit, q) {
@@ -80,4 +89,4 @@ function getById(id) {
   return db.prepare("SELECT * FROM searches WHERE id = ?").get(id) || null;
 }
 
-module.exports = { open, handle: () => db, insertSearch, getBestPrice, getHistory, getById };
+module.exports = { open, handle: () => db, insertSearch, getPriceStats, getHistory, getById };

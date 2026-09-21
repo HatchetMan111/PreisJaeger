@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PreisJäger – lokale Preisrecherche</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -21,7 +22,10 @@
 <section id="view-search">
   <form id="search-form">
     <input id="q" type="text" placeholder="z. B. Ubiquiti UXG-Lite" autocomplete="off" required>
-    <button type="submit">Suchen</button>
+    <input id="pmin" type="text" inputmode="decimal" placeholder="Min €" title="Mindestpreis (leer = kein Limit)">
+    <input id="pmax" type="text" inputmode="decimal" placeholder="Max €" title="Maximalpreis (leer = nur günstigster)">
+    <button type="submit" id="go">Suchen</button>
+    <button type="button" id="stop" class="hidden danger">Stoppen</button>
   </form>
   <div id="status"></div>
   <div id="summary" class="hidden"></div>
@@ -56,7 +60,13 @@
       <input id="s-or-key" type="password" placeholder="sk-or-…" autocomplete="off">
     </label>
     <div class="mut" id="s-or-hint"></div>
-    <label>Modell <input id="s-or-model" type="text" placeholder="openai/gpt-4o-mini"></label>
+    <label>Modell
+      <input id="s-or-model" type="text" placeholder="openai/gpt-4o-mini" list="model-list">
+      <datalist id="model-list"></datalist>
+    </label>
+    <div class="row">
+      <button id="s-load-models" type="button">Modelle laden</button>
+    </div>
     <div class="row">
       <button id="s-save-llm">Speichern</button>
       <button id="s-test-llm">Key testen</button>

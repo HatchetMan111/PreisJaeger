@@ -148,6 +148,7 @@ module.exports = {
   getShops,
   resolveShopIds,
   searchAll,
+  toCents,
   parsePrice,
   pickWinner,
   productKeyFor,

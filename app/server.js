@@ -34,6 +34,13 @@ app.get("/api/shops", (req, res) => {
   }
 });
 
+/** "97" / "97,50" / "€ 97.00" -> Cent oder null (leere Eingabe). */
+function euroToCents(v) {
+  const s = String(v == null ? "" : v).replace(/[€\s]/g, "").trim();
+  if (!s) return null;
+  return shops.toCents(s);
+}
+
 app.post("/api/search", async (req, res) => {
   const started = Date.now();
   const query = String((req.body && req.body.query) || "").trim();
@@ -59,19 +66,33 @@ app.post("/api/search", async (req, res) => {
     }
 
     for (const p of products) p.priceInfo = shops.parsePrice(p.price);
-    const winner = shops.pickWinner(products);
+
+    // Optionaler Preisbereich (EUR): leer = nur guenstigster Preis insgesamt.
+    const minCents = euroToCents(req.body && req.body.price_min);
+    const maxCents = euroToCents(req.body && req.body.price_max);
+    const rangeActive = minCents != null || maxCents != null;
+    const eurPriced = products.filter((p) => p.priceInfo.currency === "EUR" && p.priceInfo.cents != null);
+    const inRange = eurPriced.filter((p) =>
+      (minCents == null || p.priceInfo.cents >= minCents) &&
+      (maxCents == null || p.priceInfo.cents <= maxCents));
+    const outCount = eurPriced.length - inRange.length;
+    const winner = inRange.length > 0 ? shops.pickWinner(inRange) : null;
     const key = winner ? shops.productKeyFor(winner) : { key: null, confidence: null };
 
-    // Historischer Bestpreis VOR dem Speichern lesen (nur fruehere Suchen).
-    const best = key.key ? db.getBestPrice(key.key) : null;
+    // Tiefst-/Hoechstpreis VOR dem Speichern lesen (nur fruehere Suchen).
+    const stats = key.key ? db.getPriceStats(key.key) : null;
     const isNewBest = Boolean(
       winner && winner.priceInfo.cents != null &&
-      (!best || winner.priceInfo.cents < best.cents)
+      (!stats || winner.priceInfo.cents < stats.low.cents)
     );
 
-    const summary = await llm.summarize({
-      query: normalized, winner, count: products.length, isNewBest, best,
+    let summary = await llm.summarize({
+      query: normalized, winner, count: products.length, isNewBest, best: stats && stats.low,
     });
+    if (rangeActive && outCount > 0) {
+      summary += ` ${outCount} Treffer lagen ausserhalb des Preisbereichs.`;
+    }
+    const outOfRange = rangeActive && products.length > 0 && inRange.length === 0;
 
     const id = save({
       query,
@@ -85,6 +106,8 @@ app.post("/api/search", async (req, res) => {
       winner_url: winner ? winner.url : null,
       winner_shop: winner ? winner.shopProviderName : null,
       winner_is_us_import: winner && shops.US_IMPORT_SHOPS.has(winner.shopProviderId) ? 1 : 0,
+      price_min_cents: minCents,
+      price_max_cents: maxCents,
       all_results_json: JSON.stringify(products),
       result_count: products.length,
       source,
@@ -93,9 +116,10 @@ app.post("/api/search", async (req, res) => {
     });
 
     res.json({
-      id, query, normalized_query: normalized, winner, best,
+      id, query, normalized_query: normalized, winner, stats,
       is_new_best: isNewBest,
       best_confidence: key.confidence,
+      range: { min_cents: minCents, max_cents: maxCents, out_count: outCount, out_of_range: outOfRange },
       results: products, source,
       errors, timed_out: timedOut,
       summary, duration_ms: Date.now() - started,
@@ -106,6 +130,7 @@ app.post("/api/search", async (req, res) => {
         query, normalized_query: query, product_key: null, product_key_confidence: null,
         winner_name: null, winner_price_cents: null, winner_price_display: null,
         winner_currency: null, winner_url: null, winner_shop: null, winner_is_us_import: 0,
+        price_min_cents: null, price_max_cents: null,
         all_results_json: "[]", result_count: 0, source: "shops",
         model: llm.modelName(), duration_ms: Date.now() - started,
         error: err.message.split("\n")[0],
@@ -140,8 +165,8 @@ app.get("/api/history/:id", (req, res) => {
   if (!row) return res.status(404).json({ error: "nicht gefunden" });
   let results = [];
   try { results = JSON.parse(row.all_results_json); } catch (err) { /* altes Format */ }
-  const best = row.product_key ? db.getBestPrice(row.product_key) : null;
-  res.json({ ...row, results, best });
+  const stats = row.product_key ? db.getPriceStats(row.product_key) : null;
+  res.json({ ...row, results, stats });
 });
 
 app.get("/api/settings", (req, res) => {
@@ -163,6 +188,14 @@ app.post("/api/settings/test-openrouter", async (req, res) => {
     res.json(await llm.testKey((req.body && req.body.apiKey) || ""));
   } catch (err) {
     res.status(400).json({ ok: false, error: err.message.split("\n")[0] });
+  }
+});
+
+app.get("/api/settings/openrouter-models", async (req, res) => {
+  try {
+    res.json({ models: await llm.listModels() });
+  } catch (err) {
+    res.status(400).json({ error: err.message.split("\n")[0] });
   }
 });
 

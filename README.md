@@ -81,15 +81,18 @@ Erwartete Schlussausgabe (Beispiel):
 ## 2. Benutzung
 
 1. Browser: `http://<LXC-IP>:8090` → Produkt suchen (z. B. „Ubiquiti UXG-Lite").
-   Läuft **ohne Keys** (lokal, regelbasiert).
+   Läuft **ohne Keys** (lokal, regelbasiert). Optional Min-/Max-Preis setzen
+   (leer = nur günstigster Preis insgesamt); laufende Suche per **Stoppen**
+   abbrechen (Server-Lauf landet ggf. trotzdem im Verlauf).
 2. Ergebnis: Preissieger-Badge, alle Treffer mit Preis/Shop/Link, Zusammenfassung.
-3. **Bestpreis-Box**: „Bestpreis bisher: X € (Datum)" oder „Neuer Bestpreis!".
-   Matching per ASIN (exakt) bzw. Produktname („vermutlich gleiches Produkt").
+3. **Bestpreis-Box**: „Neuer Bestpreis!" oder Tiefstpreis + Höchstpreis mit
+   Datum und Anzahl Suchen – fürs Preisgefühl. Matching per ASIN (exakt)
+   bzw. Produktname („vermutlich gleiches Produkt").
 4. Reiter **Verlauf**: alle Anfragen als Tabelle, Klick → Detail, Export als CSV/JSON.
 5. Hinweis: `amazon.com`-Treffer sind USA-Import (ggf. Versand + Zoll).
-6. Reiter **Einstellungen**: OpenRouter-Key + Modell (+ Key-Test-Button),
-   Shop-Auswahl, Timeout, Brave-Fallback – alles ohne Neustart, Keys werden
-   maskiert angezeigt und nur in der Container-DB gespeichert.
+6. Reiter **Einstellungen**: OpenRouter-Key + Modell (per **Modelle laden**
+   als Auswahlliste, sonst freier Text) + Key-Test, Shop-Auswahl, Timeout,
+   Brave-Fallback – alles ohne Neustart, Keys maskiert gespeichert.
 
 ## 3. Reboot-Test (Reboot-sicher belegen)
 

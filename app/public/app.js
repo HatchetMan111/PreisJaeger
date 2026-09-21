@@ -17,10 +17,16 @@ $("tab-search").onclick = () => switchTab("search");
 $("tab-history").onclick = () => switchTab("history");
 $("tab-settings").onclick = () => switchTab("settings");
 
+let searchAbort = null;
+
 $("search-form").onsubmit = async (e) => {
   e.preventDefault();
   const q = $("q").value.trim();
   if (!q) return;
+  if (searchAbort) searchAbort.abort();
+  searchAbort = new AbortController();
+  $("stop").classList.remove("hidden");
+  $("go").disabled = true;
   $("status").textContent = "Suche läuft (bis ~60 s) …";
   $("summary").classList.add("hidden");
   $("winner").classList.add("hidden");
@@ -28,12 +34,16 @@ $("search-form").onsubmit = async (e) => {
   try {
     const res = await fetch("/api/search", {
       method: "POST",
+      signal: searchAbort.signal,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: q }),
+      body: JSON.stringify({ query: q, price_min: $("pmin").value, price_max: $("pmax").value }),
     });
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || "Fehler");
-    $("status").textContent = `${d.results.length} Treffer in ${(d.duration_ms / 1000).toFixed(1)} s · Quelle: ${esc(d.source)}`;
+    let status = `${d.results.length} Treffer in ${(d.duration_ms / 1000).toFixed(1)} s · Quelle: ${esc(d.source)}`;
+    if (d.range && d.range.out_of_range) status += " · kein Treffer im Preisbereich";
+    else if (d.range && d.range.out_count > 0) status += ` · ${d.range.out_count} außerhalb des Bereichs`;
+    $("status").textContent = status;
 
     $("summary").innerHTML = `<div class="card">${esc(d.summary)}</div>`;
     $("summary").classList.remove("hidden");
@@ -42,9 +52,11 @@ $("search-form").onsubmit = async (e) => {
       let bestHtml = "";
       if (d.is_new_best) {
         bestHtml = `<span class="badge best">Neuer Bestpreis!</span>`;
-      } else if (d.best) {
-        bestHtml = `<span class="badge src">Bestpreis bisher: ${esc(d.best.display)} (${esc(d.best.at)})</span>` +
-          (d.best_confidence === "fuzzy" ? `<span class="mut">vermutlich gleiches Produkt</span>` : "");
+      }
+      if (d.stats) {
+        bestHtml += `<div class="mut">Tiefstpreis: <b>${esc(d.stats.low.display)}</b> (${esc(d.stats.low.at)}) · ` +
+          `Höchstpreis: <b>${esc(d.stats.high.display)}</b> (${esc(d.stats.high.at)}) · aus ${d.stats.count} Suchen` +
+          (d.best_confidence === "fuzzy" ? ` · <span class="mut">vermutlich gleiches Produkt</span>` : "") + `</div>`;
       }
       $("winner").innerHTML = `<div class="card winner">
         <span class="badge win">Preissieger</span>${bestHtml}
@@ -61,8 +73,20 @@ $("search-form").onsubmit = async (e) => {
       <div class="mut">${esc(p.shopProviderName || "")}${p.rating ? " · ★ " + esc(p.rating) : ""}</div>
     </div>`).join("") || `<div class="mut">Keine Treffer.</div>`;
   } catch (err) {
-    $("status").textContent = "Fehler: " + err.message;
+    if (err.name === "AbortError") {
+      $("status").textContent = "Suche abgebrochen (Server-Lauf landet ggf. trotzdem im Verlauf).";
+    } else {
+      $("status").textContent = "Fehler: " + err.message;
+    }
+  } finally {
+    searchAbort = null;
+    $("stop").classList.add("hidden");
+    $("go").disabled = false;
   }
+};
+
+$("stop").onclick = () => {
+  if (searchAbort) searchAbort.abort();
 };
 
 async function loadHistory() {
@@ -147,14 +171,34 @@ $("s-save-fb").onclick = async () => {
   loadSettings();
 };
 
+$("s-load-models").onclick = async () => {
+  $("s-llm-status").textContent = "Lade Modelle …";
+  try {
+    const res = await fetch("/api/settings/openrouter-models");
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "unbekannt");
+    const dl = $("model-list");
+    dl.innerHTML = "";
+    for (const m of d.models) {
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.label = m.name;
+      dl.appendChild(opt);
+    }
+    $("s-llm-status").textContent = `${d.models.length} Modelle geladen – tippen oder wählen.`;
+  } catch (err) { $("s-llm-status").textContent = "Fehler: " + err.message; }
+};
+
 async function showDetail(id) {
   const res = await fetch("/api/history/" + id);
   const d = await res.json();
-  const best = d.best
-    ? `<p><span class="badge best">Bestpreis bisher: ${esc(d.best.display)} (${esc(d.best.at)})</span></p>` : "";
+  const stats = d.stats
+    ? `<p><span class="badge best">Tiefstpreis: ${esc(d.stats.low.display)} (${esc(d.stats.low.at)})</span> ` +
+      `<span class="badge src">Höchstpreis: ${esc(d.stats.high.display)} (${esc(d.stats.high.at)})</span> ` +
+      `<span class="mut">aus ${d.stats.count} Suchen</span></p>` : "";
   $("detail").innerHTML = `<div class="card"><h3>${esc(d.query)}</h3>
     <p class="mut">Normalisiert: ${esc(d.normalized_query)} · ${esc(d.created_at)}</p>
-    ${best}
+    ${stats}
     ${(d.results || []).map((p) => `<p><b>${esc((p.priceInfo && p.priceInfo.display) || p.price || "–")}</b>
     – <a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.name)}</a>
     <span class="mut">(${esc(p.shopProviderName || "")})</span></p>`).join("")}

@@ -131,4 +131,28 @@ async function testKey(apiKey) {
   }
 }
 
-module.exports = { normalize, summarize, modelName, testKey };
+/** Modell-Liste von OpenRouter (fuer das Dropdown in den Einstellungen). */
+async function listModels() {
+  const key = (cfg().apiKey || "").trim();
+  if (!key) throw new Error("Kein API-Key gespeichert – erst Key eintragen und speichern");
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/models", {
+      signal: ctrl.signal,
+      headers: { Authorization: "Bearer " + key },
+    });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error("OpenRouter HTTP " + res.status + " (Key ungueltig?)");
+    const data = await res.json();
+    return (Array.isArray(data.data) ? data.data : []).map((m) => ({
+      id: m.id,
+      name: m.name || m.id,
+    }));
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
+module.exports = { normalize, summarize, modelName, testKey, listModels };
