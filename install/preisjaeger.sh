@@ -285,7 +285,10 @@ rm -f "$SETUP_LOCAL"
 
 step "Fuehre Setup im Container aus"
 pct exec "$CTID" -- bash /tmp/preisjaeger-setup.sh "$PORT"
-pct exec "$CTID" -- rm -f /tmp/preisjaeger-setup.sh
+# Cleanup ist Kosmetik und darf die Installation nie scheitern lassen
+# (gelernt aus CT 105: rm meldete Exit 129, obwohl Setup + Service ok waren).
+pct exec "$CTID" -- rm -f /tmp/preisjaeger-setup.sh /tmp/preisjaeger-env 2>/dev/null \
+  || echo "[WARN]   Container-Cleanup uebersprungen (harmlos, weiter geht's)."
 ok "Setup im Container abgeschlossen."
 
 # ---------------- 7. Verifikation ----------------
