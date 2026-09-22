@@ -120,7 +120,15 @@ async function loadSettings() {
   const { settings: s, shop_defaults } = await sres.json();
   const { shops } = await shopsRes.json();
   $("s-provider").value = s.LLM_PROVIDER || "none";
-  $("s-or-model").value = s.OPENROUTER_MODEL || "";
+  const sel = $("s-or-model");
+  const savedModel = s.OPENROUTER_MODEL || "";
+  if (savedModel && ![...sel.options].some((o) => o.value === savedModel)) {
+    const opt = document.createElement("option");
+    opt.value = savedModel;
+    opt.textContent = savedModel + " (gespeichert)";
+    sel.appendChild(opt);
+  }
+  sel.value = savedModel;
   $("s-or-hint").textContent = s.OPENROUTER_API_KEY
     ? "Gespeichert: " + s.OPENROUTER_API_KEY + " (Feld leer lassen = behalten)" : "Kein Key gespeichert.";
   $("s-timeout").value = s.SHOP_TIMEOUT_MS || "40000";
@@ -177,15 +185,17 @@ $("s-load-models").onclick = async () => {
     const res = await fetch("/api/settings/openrouter-models");
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || "unbekannt");
-    const dl = $("model-list");
-    dl.innerHTML = "";
+    const sel = $("s-or-model");
+    const keep = sel.value;
+    sel.innerHTML = "";
     for (const m of d.models) {
       const opt = document.createElement("option");
       opt.value = m.id;
-      opt.label = m.name;
-      dl.appendChild(opt);
+      opt.textContent = m.name;
+      sel.appendChild(opt);
     }
-    $("s-llm-status").textContent = `${d.models.length} Modelle geladen – tippen oder wählen.`;
+    if (keep && [...sel.options].some((o) => o.value === keep)) sel.value = keep;
+    $("s-llm-status").textContent = `${d.models.length} Modelle geladen – direkt wählen (tippen zum Springen).`;
   } catch (err) { $("s-llm-status").textContent = "Fehler: " + err.message; }
 };
 

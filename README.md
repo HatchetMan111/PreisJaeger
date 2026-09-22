@@ -90,9 +90,9 @@ Erwartete Schlussausgabe (Beispiel):
    bzw. Produktname („vermutlich gleiches Produkt").
 4. Reiter **Verlauf**: alle Anfragen als Tabelle, Klick → Detail, Export als CSV/JSON.
 5. Hinweis: `amazon.com`-Treffer sind USA-Import (ggf. Versand + Zoll).
-6. Reiter **Einstellungen**: OpenRouter-Key + Modell (per **Modelle laden**
-   als Auswahlliste, sonst freier Text) + Key-Test, Shop-Auswahl, Timeout,
-   Brave-Fallback – alles ohne Neustart, Keys maskiert gespeichert.
+6. Reiter **Einstellungen**: OpenRouter-Key + Modell-**Dropdown**
+   (per **Modelle laden** gefüllt, direkt wählbar) + Key-Test, Shop-Auswahl,
+   Timeout, Brave-Fallback – alles ohne Neustart, Keys maskiert gespeichert.
 
 ## 3. Reboot-Test (Reboot-sicher belegen)
 
