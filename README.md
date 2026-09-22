@@ -164,6 +164,10 @@ PreisJaeger/
 - **Browser-Pfad:** Chromium liegt in `/opt/preisjaeger/ms-playwright`
   (per `PLAYWRIGHT_BROWSERS_PATH` in der Unit), damit der Service-User
   `preisjaeger` ihn findet – `/root/.cache` wäre für ihn unsichtbar.
+- **Standard-Shops:** nur Deutschland (`amazon-de`, `mydealz`). Andere Shops
+  lassen sich in den Einstellungen zuschalten. Hinweis: `ebay-de` gibt es im
+  Upstream-Server nicht (nur `ebay-com`/`ebay-fr`); `ebay-com` versendet
+  ggf. international nach Deutschland.
 - **RAM:** 2 GB Standard für paralleles Scraping mehrerer Shops; per
   `--memory 4096` erhöhbar. Per `SHOP_IDS` in der `.env` lässt sich die
   Shop-Auswahl begrenzen (weniger parallele Browser-Kontexte).

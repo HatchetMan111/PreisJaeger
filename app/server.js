@@ -170,7 +170,7 @@ app.get("/api/history/:id", (req, res) => {
 });
 
 app.get("/api/settings", (req, res) => {
-  res.json({ settings: config.allMasked(), shop_defaults: shops.EU_DEFAULT_SHOPS });
+  res.json({ settings: config.allMasked(), shop_defaults: shops.DE_DEFAULT_SHOPS });
 });
 
 app.post("/api/settings", (req, res) => {

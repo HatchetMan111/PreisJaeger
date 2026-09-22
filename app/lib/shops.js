@@ -19,6 +19,9 @@ const EU_DEFAULT_SHOPS = [
   "amazon-de", "amazon-fr", "amazon-it", "amazon-es",
   "ebay-com", "ebay-fr", "mydealz", "dealabs",
 ];
+// Standard: nur deutsche Shops. Hinweis: ebay-de gibt es im Upstream-Server
+// nicht (nur ebay-com/fr) – ebay-com kann bei Bedarf manuell zugeschaltet werden.
+const DE_DEFAULT_SHOPS = ["amazon-de", "mydealz"];
 const US_IMPORT_SHOPS = new Set(["amazon-com", "ebay-com", "pepperdeals"]);
 
 function getShops() {
@@ -34,7 +37,7 @@ function getShops() {
 function resolveShopIds(wanted) {
   const valid = new Set(shopsUtils.validShops.map((s) => s.id));
   if (!wanted || wanted.length === 0) {
-    return EU_DEFAULT_SHOPS.filter((id) => valid.has(id));
+    return DE_DEFAULT_SHOPS.filter((id) => valid.has(id));
   }
   const ids = wanted.filter((id) => valid.has(id));
   if (ids.length === 0) throw new Error("Keine gueltigen Shop-IDs: " + wanted.join(","));
@@ -144,6 +147,7 @@ function productKeyFor(product) {
 
 module.exports = {
   EU_DEFAULT_SHOPS,
+  DE_DEFAULT_SHOPS,
   US_IMPORT_SHOPS,
   getShops,
   resolveShopIds,
